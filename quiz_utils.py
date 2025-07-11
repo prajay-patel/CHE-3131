@@ -3,7 +3,8 @@ import base64
 from IPython.display import display, HTML
 from jupyterquiz import display_quiz
 
-def collapsible_display_quiz(encoded_json_path='quiz_encoded.json', dict_key=None):
+def json_to_quiz(encoded_json_path='quiz_encoded.json', dict_key=None):
+
     """
     Loads base64-encoded quiz data from a JSON file and displays it using JupyterQuiz.
     Supports decoding either a list of questions or a dictionary containing the list.
@@ -12,7 +13,6 @@ def collapsible_display_quiz(encoded_json_path='quiz_encoded.json', dict_key=Non
     Parameters:
         encoded_json_path (str): Path to the base64-encoded quiz JSON file.
         dict_key (str or None): If the decoded data is a dict, this key is used to extract the list of quiz questions.
-        open_by_default (bool): Whether the collapsible block is open by default.
     """
 
     # Decode the quiz
@@ -33,6 +33,3 @@ def collapsible_display_quiz(encoded_json_path='quiz_encoded.json', dict_key=Non
 
     # Display the quiz
     display_quiz(quiz_data)
-
-    # End collapsible block
-    display(HTML("</details>"))
