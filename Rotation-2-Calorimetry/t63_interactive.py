@@ -360,7 +360,7 @@ def interactive_explorer(x1, x2_value, x3):
     linestyle='dashed',label='$\Delta T$')
 
     plt.xlabel('Time (sec)')
-    plt.ylabel('Temperature (°C)')
+    plt.ylabel('Temperature ($\degree$C)')
     plt.legend(loc='center left', bbox_to_anchor=(1.05, 0.5))
     plt.grid(True)
     plt.show()
