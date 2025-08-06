@@ -423,7 +423,7 @@ x1_slider = widgets.FloatSlider(
 )
 
 x2_slider = widgets.FloatSlider(
-    value=92,  # Initial value for x2
+    value=95,  # Initial value for x2
     min=min_time, # Set min/max to data range initially, will be constrained by x1 and x3 in the function
     max=max_time,
     step=(max_time - min_time) / 500, # Adjusted step

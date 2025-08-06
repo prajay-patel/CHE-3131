@@ -396,13 +396,16 @@ def interactive_explorer(x1, x2_value, x3):
     # Clear the previous plot
     plt.clf()
 
-    # Plot the data
-    #plt.plot(trial1.index, trial1['temperature']) # Assuming trial1 is defined
-    plt.plot(trial1.index,f(trial1.index))
-    # Plot sections for x1 and x3 ranges
-    #plt.plot(trial1.loc[trial1.index <= x1].index, trial1['temperature'].loc[trial1.index <= x1])
-    #plt.plot(trial1.loc[trial1.index >= x3].index, trial1['temperature'].loc[trial1.index >= x3])
 
+       # Plot the data
+    plt.plot(trial1.index, trial1['temperature'],'C0o',alpha=0.3,markersize=2) # Assuming trial1 is defined
+    
+    # Plot sections for x1 and x3 ranges
+    plt.plot(trial1.loc[trial1.index <= x1].index, trial1['temperature'].loc[trial1.index <= x1],'C1o',alpha=0.3,markersize=3)
+    plt.plot(trial1.loc[trial1.index >= x3].index, trial1['temperature'].loc[trial1.index >= x3],'C2o',alpha=0.3,markersize=3)
+
+   
+    plt.plot(trial1.index,f(trial1.index),'C0-',lw=2) 
 
     # Plot the best fit lines (assuming Ti1 and Tf1 are defined)
     plt.plot(trial1.index, Ti1.slope*trial1.index + Ti1.intercept, 'C1--', label='pre-reaction line')
@@ -412,7 +415,7 @@ def interactive_explorer(x1, x2_value, x3):
 
     T63R_line=line(trial1.index,Ti1.slope,Ti1.intercept) + 0.632*(line(trial1.index,Tf1.slope,Tf1.intercept)\
                                                                   -line(trial1.index,Ti1.slope,Ti1.intercept))
-    plt.plot(trial1.index, T63R_line, 'C3--', label='T$_{63R}$ Line')
+    plt.plot(trial1.index, T63R_line, 'C4--', label='T$_{63R}$ Line')
 
     # Plot x1, x2, and x3 points on the thermogram
     plt.plot(x1, f(x1), 'C1o', label=f'$x_1$ ({x1:.2f})')
@@ -428,6 +431,7 @@ def interactive_explorer(x1, x2_value, x3):
     plt.ylabel('Temperature (°C)')
     plt.legend(loc='center left', bbox_to_anchor=(1.05, 0.5))
     plt.grid(True)
+    plt.xlim(70,130)
     plt.show()
 
     # Display the calculated values
