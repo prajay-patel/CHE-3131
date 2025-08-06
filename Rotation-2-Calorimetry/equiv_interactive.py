@@ -369,9 +369,6 @@ def interactive_explorer(x1, x2_value, x3):
     # Plot the data
     plt.plot(xdata_all, f(xdata_all)) # Assuming trial1 is defined
 
-    # Plot sections for x1 and x3 ranges
-    #plt.plot(trial1.loc[trial1.index <= x1].index, trial1['temperature'].loc[trial1.index <= x1])
-    #plt.plot(trial1.loc[trial1.index >= x3].index, trial1['temperature'].loc[trial1.index >= x3])
 
 
     # Plot the best fit lines (assuming Ti1 and Tf1 are defined)
@@ -397,7 +394,7 @@ def interactive_explorer(x1, x2_value, x3):
     plt.ylabel('Temperature ($\degree$C)')
     plt.legend(loc='center left', bbox_to_anchor=(1.05, 0.5))
     plt.grid(True)
-    plt.xlim(70,130)
+    plt.xlim(70,150)
     plt.show()
 
     # Display the calculated values
@@ -407,7 +404,7 @@ def interactive_explorer(x1, x2_value, x3):
 
 # Get the min and max time from the trial1 DataFrame
 min_time = 80
-max_time = 120
+max_time = 150
 
 # Create sliders for x1, x2, and x3 with bounds based on data range
 x1_slider = widgets.FloatSlider(

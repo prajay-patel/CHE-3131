@@ -352,38 +352,9 @@ def interactive_explorer(x1, x2_value, x3):
     
     xdata_all=trial1.index
     ydata_all=trial1['temperature']
-
-    # Calculate the difference at the selected x2_value (assuming 'diff1' is defined elsewhere)
-    # Ensure diff1 is defined or calculate the metric directly
-    # For now, assuming diff1 is defined and works with a single value
     
     yi=line(x2_value,Ti1.slope,Ti1.intercept) # Assuming line and Ti1 are defined
     yf=line(x2_value,Tf1.slope,Tf1.intercept) # Assuming line and Tf1 are defined
-    # Need to get the actual thermogram temperature at x2_value
-    # Assuming trial1 is a pandas DataFrame with 'temperature' column and time index
-    # And assuming x2_value is within the index range
-    
-    #try:
-    #    y = trial1['temperature'].loc[x2_value]
-    #except KeyError:
-        # If x2_value is not exactly in the index, use interpolation or the nearest value
-        # For simplicity here, we'll assume it's close enough or interpolation is available via f
-    #    y = f(x2_value)
-
-        # Fit the data with initial conditions
-    #gmodel1 = Model(logistic)
-
-    # Pick initial conditions for ydata, xdata, and fitting parameters
-    # x0 and B should be changed based on your information
-    # x0 is the time you hit the plunger
-    # B is the temperature you set the y axis to
-    #result1 = gmodel1.fit(ydata_all, x=xdata_all, L=2, x0=90, k=2, B=22)
-
-    # Return the best fit parameters
-    #L=result1.params['L'].value
-    #x0=result1.params['x0'].value
-    #k=result1.params['k'].value
-    #B=result1.params['B'].value
     
     y = f(x2_value)
     
@@ -397,14 +368,13 @@ def interactive_explorer(x1, x2_value, x3):
     plt.clf()
 
 
-       # Plot the data
+    # Plot the data
     plt.plot(trial1.index, trial1['temperature'],'C0o',alpha=0.3,markersize=2) # Assuming trial1 is defined
     
     # Plot sections for x1 and x3 ranges
     plt.plot(trial1.loc[trial1.index <= x1].index, trial1['temperature'].loc[trial1.index <= x1],'C1o',alpha=0.3,markersize=3)
     plt.plot(trial1.loc[trial1.index >= x3].index, trial1['temperature'].loc[trial1.index >= x3],'C2o',alpha=0.3,markersize=3)
 
-   
     plt.plot(trial1.index,f(trial1.index),'C0-',lw=2) 
 
     # Plot the best fit lines (assuming Ti1 and Tf1 are defined)
@@ -431,7 +401,7 @@ def interactive_explorer(x1, x2_value, x3):
     plt.ylabel('Temperature (°C)')
     plt.legend(loc='center left', bbox_to_anchor=(1.05, 0.5))
     plt.grid(True)
-    plt.xlim(70,130)
+    plt.xlim(70,150)
     plt.show()
 
     # Display the calculated values
