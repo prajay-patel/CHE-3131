@@ -22,7 +22,7 @@ from lmfit import Model
 import warnings
 # Suppress font manager fallback warning
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib.font_manager")
-                     
+    
 time= np.array([  0. ,   0.2,   0.4,   0.6,   0.8,   1. ,   1.2,   1.4,   1.6,
          1.8,   2. ,   2.2,   2.4,   2.6,   2.8,   3. ,   3.2,   3.4,
          3.6,   3.8,   4. ,   4.2,   4.4,   4.6,   4.8,   5. ,   5.2,
@@ -265,16 +265,9 @@ def interactive_explorer(x1, x2_value, x3):
       ''' Define a function for a line '''
       y = m*x + b
       return y
-
-    def logistic(x, L ,x0, k, B):
-      ''' Define a logistic function '''
-      y = L / (1 + np.exp(-k*(x-x0))) + B
-      return y
-
-    # Interpolation function
-    def interp(trial1):
-      f = interpolate.interp1d(trial1.index, trial1['temperature'])
-      return f
+      
+    def exponential(x, A, k, C):
+        return A * np.exp(-k*(x - 91)) + C
 
     # Ensure x1 is less than x2_value and x2_value is less than x3
     # This is a simple way to handle potential issues with the sliders
@@ -286,14 +279,13 @@ def interactive_explorer(x1, x2_value, x3):
     if x1 >= x3: # Also handle the case where x1 becomes >= x3 after adjustments
          x3 = x1 + 1
 
-    # Use interpolation function (assuming 'interp' and 'trial1' are defined elsewhere)
-    f = interp(trial1)
 
-    xdata=trial1.loc[0:x1+1].index
-    ydata=trial1['temperature'].loc[0:x1+1]
 
-    xdata2=trial1.loc[x3:].index
-    ydata2=trial1['temperature'].loc[x3:]
+    xdata=trial1.loc[0:91].index
+    ydata=trial1['temperature'].loc[0:91]
+
+    xdata2=trial1.loc[120:].index
+    ydata2=trial1['temperature'].loc[120:]
 
     Ti1=scipy.stats.linregress(xdata,ydata)
     Tf1=scipy.stats.linregress(xdata2,ydata2)
@@ -301,27 +293,63 @@ def interactive_explorer(x1, x2_value, x3):
     xdata_all=trial1.index
     ydata_all=trial1['temperature']
 
-    # Fit the data with initial conditions
-    gmodel1 = Model(logistic)
+    time = xdata_all  # your time data
+    temp = ydata_all  # your temperature data
 
-    # Pick initial conditions for ydata, xdata, and fitting parameters
-    # x0 and B should be changed based on your information
-    # x0 is the time you hit the plunger
-    # B is the temperature you set the y axis to
-    result1 = gmodel1.fit(ydata_all, x=xdata_all, L=2, x0=90, k=2, B=22)
+    # Step 1: linear fit to time <= 90
+    mask_linear = time <= 91
+    time_linear = time[mask_linear]
+    temp_linear = temp[mask_linear]
 
-    # Return the best fit parameters
-    L=result1.params['L'].value
-    x0=result1.params['x0'].value
-    k=result1.params['k'].value
-    B=result1.params['B'].value
+    linear_model = Model(line)
+    linear_result = linear_model.fit(temp_linear, x=time_linear, m=0.1, b=20)
 
-    # Calculate area B (Logistic Curve - Temp Init Line)
-    Thermo_init=scipy.integrate.quad(logistic, x1, x2_value, args=(L, x0, k, B))[0]
+    # Step 2: exponential fit to time > x1
+    mask_exp = time > 91
+    time_exp = time[mask_exp]
+    temp_exp = temp[mask_exp]
+
+    exp_model = Model(exponential)
+    exp_result = exp_model.fit(temp_exp, x=time_exp, A=1.0, k=0.1, C=20)
+    
+    def Y_combined(x2,xdata,linear_result,exp_result):
+      # Split xdata based on condition
+      x_linear = xdata[xdata < x2]
+      x_exp = xdata[xdata >= x2]
+
+      # Calculate predicted y values from each segment
+      y_linear_fit = line(x_linear, linear_result.params['m'].value,linear_result.params['b'].value)
+      y_exp_fit = exponential(x_exp, exp_result.params['A'].value,exp_result.params['k'].value,exp_result.params['C'].value)
+
+      # Combine into one full predicted y array (same length and order as xdata)
+      y_combined = np.empty_like(xdata)
+
+      # Fill values accordingly
+      y_combined[xdata < x2] = y_linear_fit
+      y_combined[xdata >= x2] = y_exp_fit
+
+      return y_combined
+
+    y_combined = Y_combined(92,xdata_all,linear_result,exp_result)
+    
+    # Use interpolation function (assuming 'interp' and 'trial1' are defined elsewhere)
+    f = interpolate.interp1d(xdata_all,y_combined)
+    
+    # Define the number of rectangles for Simpson's rule
+    num_rectangles= 50000
+    
+    # Generate x values for Simpson's rule
+    x_lo = np.linspace(x1, x2_value, num_rectangles).flatten()
+    x_hi = np.linspace(x2_value, x3, num_rectangles).flatten()
+    y_lo = f(x_lo)
+    y_hi = f(x_hi)
+    
+    # Calculate area B (Interpolation Curve - Temp Init Line)
+    Thermo_init=scipy.integrate.simpson(y_lo, x_lo)
     Line_init=scipy.integrate.quad(line, x1, x2_value, args=(Ti1.slope, Ti1.intercept))[0]
 
     # Calculate area A (Temp final line - Logistic Curve)
-    Thermo_final=scipy.integrate.quad(logistic, x2_value, x3, args=(L, x0, k, B))[0]
+    Thermo_final=scipy.integrate.simpson(y_hi, x_hi)
     Line_final=scipy.integrate.quad(line, x2_value, x3, args=(Tf1.slope, Tf1.intercept))[0]
 
     # Calculate the areas (You will code this)
@@ -339,11 +367,8 @@ def interactive_explorer(x1, x2_value, x3):
     plt.clf()
 
     # Plot the data
-    plt.plot(trial1.index, logistic(trial1.index,L,x0,k,B)) # Assuming trial1 is defined
+    plt.plot(xdata_all, f(xdata_all)) # Assuming trial1 is defined
 
-    # Plot sections for x1 and x3 ranges
-    #plt.plot(trial1.loc[trial1.index <= x1].index, trial1['temperature'].loc[trial1.index <= x1])
-    #plt.plot(trial1.loc[trial1.index >= x3].index, trial1['temperature'].loc[trial1.index >= x3])
 
 
     # Plot the best fit lines (assuming Ti1 and Tf1 are defined)
@@ -351,13 +376,13 @@ def interactive_explorer(x1, x2_value, x3):
     plt.plot(trial1.index, Tf1.slope*trial1.index + Tf1.intercept, 'C2--', label='post-reaction line')
 
     plt.fill_between(trial1.loc[x1:x2_value].index,line(trial1.loc[x1:x2_value].index,Ti1.slope,Ti1.intercept)\
-                     , logistic(trial1.loc[x1:x2_value].index,L,x0,k,B),color='C0',alpha=0.2)
+                     , f(trial1.loc[x1:x2_value].index),color='C0',alpha=0.2)
     plt.fill_between(trial1.loc[x2_value:x3].index,line(trial1.loc[x2_value:x3].index,Tf1.slope,Tf1.intercept)\
-                     , logistic(trial1.loc[x2_value:x3].index,L,x0,k,B),color='C0',alpha=0.2)
+                     , f(trial1.loc[x2_value:x3].index),color='C0',alpha=0.2)
 
     # Plot x1, x2, and x3 points on the thermogram
     plt.plot(x1, f(x1), 'C1o', label=f'$x_1$ ({x1:.2f})')
-    plt.plot(x2_value, logistic(x2_value,L,x0,k,B), 'ko', label=f'$x_2$ ({x2_value:.2f})')
+    plt.plot(x2_value, f(x2_value), 'ko', label=f'$x_2$ ({x2_value:.2f})')
     plt.plot(x3, f(x3), 'C2o', label=f'$x_3$ ({x3:.2f})')
 
     plt.plot(x2_value,line(x2_value,Tf1.slope,Tf1.intercept),'ko')
@@ -366,10 +391,10 @@ def interactive_explorer(x1, x2_value, x3):
                ,'k',linestyle='dashed',label='$\Delta T$')
 
     plt.xlabel('Time (sec)')
-    plt.ylabel('Temperature (°C)')
+    plt.ylabel('Temperature ($\degree$C)')
     plt.legend(loc='center left', bbox_to_anchor=(1.05, 0.5))
     plt.grid(True)
-    plt.xlim(70,130)
+    plt.xlim(70,150)
     plt.show()
 
     # Display the calculated values
@@ -378,12 +403,12 @@ def interactive_explorer(x1, x2_value, x3):
 
 
 # Get the min and max time from the trial1 DataFrame
-min_time = 70
-max_time = 130
+min_time = 80
+max_time = 150
 
 # Create sliders for x1, x2, and x3 with bounds based on data range
 x1_slider = widgets.FloatSlider(
-    value=85, # Initial value for x1
+    value=91, # Initial value for x1
     min=min_time,
     max=max_time,
     step=(max_time - min_time) / 500, # Adjusted step for potentially wider range
@@ -395,7 +420,7 @@ x1_slider = widgets.FloatSlider(
 )
 
 x2_slider = widgets.FloatSlider(
-    value=105,  # Initial value for x2
+    value=95,  # Initial value for x2
     min=min_time, # Set min/max to data range initially, will be constrained by x1 and x3 in the function
     max=max_time,
     step=(max_time - min_time) / 500, # Adjusted step

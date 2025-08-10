@@ -16,6 +16,9 @@ from scipy.integrate import quad
 import scipy.optimize
 from scipy import stats
 
+import lmfit
+from lmfit import Model
+
 import warnings
 # Suppress font manager fallback warning
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib.font_manager")
@@ -263,10 +266,8 @@ def interactive_explorer(x1, x2_value, x3):
       y = m*x + b
       return y
     
-    # Interpolation function
-    def interp(trial1):
-      f = interpolate.interp1d(trial1.index, trial1.temperature)
-      return f
+    def exponential(x, A, k, C):
+        return A * np.exp(-k*(x - 91)) + C
 
     def t63_diff(x2):
     
@@ -294,9 +295,52 @@ def interactive_explorer(x1, x2_value, x3):
     if x1 >= x3: # Also handle the case where x1 becomes >= x3 after adjustments
          x3 = x1 + 1
 
-    # Use interpolation function (assuming 'interp' and 'trial1' are defined elsewhere)
-    f = interp(trial1)
+    xdata_all=trial1.index
+    ydata_all=trial1['temperature']
+    
+    time = xdata_all  # your time data
+    temp = ydata_all  # your temperature data
 
+    # Step 1: linear fit to time <= 90
+    mask_linear = time <= 91
+    time_linear = time[mask_linear]
+    temp_linear = temp[mask_linear]
+
+    linear_model = Model(line)
+    linear_result = linear_model.fit(temp_linear, x=time_linear, m=0.1, b=20)
+
+    # Step 2: exponential fit to time > x1
+    mask_exp = time > 91
+    time_exp = time[mask_exp]
+    temp_exp = temp[mask_exp]
+
+    exp_model = Model(exponential)
+    exp_result = exp_model.fit(temp_exp, x=time_exp, A=1.0, k=0.1, C=20)
+    
+    def Y_combined(x2,xdata,linear_result,exp_result):
+      # Split xdata based on condition
+      x_linear = xdata[xdata < x2]
+      x_exp = xdata[xdata >= x2]
+
+      # Calculate predicted y values from each segment
+      y_linear_fit = line(x_linear, linear_result.params['m'].value,linear_result.params['b'].value)
+      y_exp_fit = exponential(x_exp, exp_result.params['A'].value,exp_result.params['k'].value,exp_result.params['C'].value)
+
+      # Combine into one full predicted y array (same length and order as xdata)
+      y_combined = np.empty_like(xdata)
+
+      # Fill values accordingly
+      y_combined[xdata < x2] = y_linear_fit
+      y_combined[xdata >= x2] = y_exp_fit
+
+      return y_combined
+
+    y_combined = Y_combined(92,xdata_all,linear_result,exp_result)
+    
+    # Use interpolation function (assuming 'interp' and 'trial1' are defined elsewhere)
+    f = interpolate.interp1d(xdata_all,y_combined)
+    
+    
     xdata=trial1.loc[0:x1+1].index
     ydata=trial1['temperature'].loc[0:x1+1]
 
@@ -305,23 +349,15 @@ def interactive_explorer(x1, x2_value, x3):
 
     Ti1=scipy.stats.linregress(xdata,ydata)
     Tf1=scipy.stats.linregress(xdata2,ydata2)
-
-    # Calculate the difference at the selected x2_value (assuming 'diff1' is defined elsewhere)
-    # Ensure diff1 is defined or calculate the metric directly
-    # For now, assuming diff1 is defined and works with a single value
+    
+    xdata_all=trial1.index
+    ydata_all=trial1['temperature']
     
     yi=line(x2_value,Ti1.slope,Ti1.intercept) # Assuming line and Ti1 are defined
     yf=line(x2_value,Tf1.slope,Tf1.intercept) # Assuming line and Tf1 are defined
-    # Need to get the actual thermogram temperature at x2_value
-    # Assuming trial1 is a pandas DataFrame with 'temperature' column and time index
-    # And assuming x2_value is within the index range
-    try:
-        y = trial1['temperature'].loc[x2_value]
-    except KeyError:
-        # If x2_value is not exactly in the index, use interpolation or the nearest value
-        # For simplicity here, we'll assume it's close enough or interpolation is available via f
-        y = f(x2_value)
-
+    
+    y = f(x2_value)
+    
     dy=(y-yi)/(yf-yi)
     diff_value = np.abs(dy-0.632)
 
@@ -331,13 +367,15 @@ def interactive_explorer(x1, x2_value, x3):
     # Clear the previous plot
     plt.clf()
 
+
     # Plot the data
-    plt.plot(trial1.index, trial1['temperature']) # Assuming trial1 is defined
-
+    plt.plot(trial1.index, trial1['temperature'],'C0o',alpha=0.3,markersize=2) # Assuming trial1 is defined
+    
     # Plot sections for x1 and x3 ranges
-    plt.plot(trial1.loc[trial1.index <= x1].index, trial1['temperature'].loc[trial1.index <= x1])
-    plt.plot(trial1.loc[trial1.index >= x3].index, trial1['temperature'].loc[trial1.index >= x3])
+    plt.plot(trial1.loc[trial1.index <= x1].index, trial1['temperature'].loc[trial1.index <= x1],'C1o',alpha=0.3,markersize=3)
+    plt.plot(trial1.loc[trial1.index >= x3].index, trial1['temperature'].loc[trial1.index >= x3],'C2o',alpha=0.3,markersize=3)
 
+    plt.plot(trial1.index,f(trial1.index),'C0-',lw=2) 
 
     # Plot the best fit lines (assuming Ti1 and Tf1 are defined)
     plt.plot(trial1.index, Ti1.slope*trial1.index + Ti1.intercept, 'C1--', label='pre-reaction line')
@@ -347,7 +385,7 @@ def interactive_explorer(x1, x2_value, x3):
 
     T63R_line=line(trial1.index,Ti1.slope,Ti1.intercept) + 0.632*(line(trial1.index,Tf1.slope,Tf1.intercept)\
                                                                   -line(trial1.index,Ti1.slope,Ti1.intercept))
-    plt.plot(trial1.index, T63R_line, 'C3--', label='T$_{63R}$ Line')
+    plt.plot(trial1.index, T63R_line, 'C4--', label='T$_{63R}$ Line')
 
     # Plot x1, x2, and x3 points on the thermogram
     plt.plot(x1, f(x1), 'C1o', label=f'$x_1$ ({x1:.2f})')
@@ -360,9 +398,10 @@ def interactive_explorer(x1, x2_value, x3):
     linestyle='dashed',label='$\Delta T$')
 
     plt.xlabel('Time (sec)')
-    plt.ylabel('Temperature ($\degree$C)')
+    plt.ylabel('Temperature (°C)')
     plt.legend(loc='center left', bbox_to_anchor=(1.05, 0.5))
     plt.grid(True)
+    plt.xlim(70,150)
     plt.show()
 
     # Display the calculated values
