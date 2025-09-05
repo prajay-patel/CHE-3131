@@ -388,10 +388,10 @@ def interactive_explorer(x1, x2_value, x3):
     plt.plot(x2_value,line(x2_value,Tf1.slope,Tf1.intercept),'ko')
     plt.plot(x2_value,line(x2_value,Ti1.slope,Ti1.intercept),'ko')
     plt.vlines(x2_value,line(x2_value,Ti1.slope,Ti1.intercept),line(x2_value,Tf1.slope,Tf1.intercept)\
-               ,'k',linestyle='dashed',label='$\Delta T$')
+               ,'k',linestyle='dashed',label=r'$\Delta T$')
 
-    plt.xlabel('Time (sec)')
-    plt.ylabel('Temperature ($\degree$C)')
+    plt.xlabel(r'Time (sec)')
+    plt.ylabel(r'Temperature ($\degree$C)')
     plt.legend(loc='center left', bbox_to_anchor=(1.05, 0.5))
     plt.grid(True)
     plt.xlim(70,150)
