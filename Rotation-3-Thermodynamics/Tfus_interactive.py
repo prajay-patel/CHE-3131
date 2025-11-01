@@ -73,7 +73,7 @@ def plot_Tfusion(t1_start=0, t1_end=20, t2_start=200, t2_end=227):
         if D != 0:
             x_int = (intercept1 - intercept2) / D
             y_int = slope1*x_int + intercept1
-            ax1.scatter(x_int, y_int, color='k', s=60, zorder=5, label=(r'T$_{fus}$ = '+f'{y_int:.3f} °C'))
+            ax1.scatter(x_int, y_int, color='k', s=60, zorder=5, label=(r'T$_{fus}$ = '+f'{y_int:.3f}°C'))
 
     # Calculate the molar mass
     bB=(y_int-7.01)/-20.459
@@ -98,9 +98,8 @@ def plot_Tfusion(t1_start=0, t1_end=20, t2_start=200, t2_end=227):
     ax2.plot(diff_time[diff_seg2_indices], diff_mix2[diff_seg2_indices], 'b', alpha=0.35, lw=2)
     ax2.plot(diff_time[diff_seg2_indices], diff_mix2_savgol[diff_seg2_indices], 'b', alpha=0.75)
     ax2.set_xlabel('Time (s)')
-    ax2.set_ylabel('dT/dt')
+    ax2.set_ylabel(r'dT/dt ($\degree$C/s)')
     ax2.grid(True)
-    ax2
     ax2.text(100,-0.0175,f"Calculated Molar Mass: {mw_pDBrB:.3f} g/mol",fontsize=12)
     ax2.text(100,-0.0195,f"Actual Molar Mass: 235.906 g/mol",fontsize=12)
     ax2.legend()
